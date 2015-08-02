@@ -1,2 +1,5 @@
+# cleaning some trash
+
 *.deb
-_
+_/
+obj/
