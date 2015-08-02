@@ -81,15 +81,6 @@ static bool simpleMode = false;
     %orig;
 }
 
-- (BOOL)alertViewShouldEnableFirstOtherButton:(UIAlertView *)alertView
-{
-    UITextField *textField = [alertView textFieldAtIndex:0];
-    if ([textField.text length] == 0){
-        return NO;
-    }
-    return YES; 
-}
-
 -(void)dismissWithClickedButtonIndex:(NSInteger)clickedButtonIndex animated:(BOOL)animated {
 
     if (self.tag == 2 && clickedButtonIndex == 1) {
