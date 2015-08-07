@@ -36,18 +36,27 @@ static bool simpleMode = false;
 
             if ([arrayOfURLs count] > 1) {
 
-                UIAlertView *alert = [[UIAlertView alloc]
-                    initWithTitle:@"⚠️ Multiple Sources Found"
-                    message:[NSString stringWithFormat:@"Do you want to add them all?\n\n%@", [arrayOfURLs componentsJoinedByString:@"\n"]]
-                    delegate:self
-                    cancelButtonTitle:@"Cancel"
-                    otherButtonTitles:@"Add Matched Sources",
-                    @"Simple Mode", nil];
+                UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"⚠️ Multiple Sources Found" message:[NSString stringWithFormat:@"Do you want to add them all?\n\n%@", [arrayOfURLs componentsJoinedByString:@"\n"]] preferredStyle:UIAlertControllerStyleAlert];
 
-                alert.tag = 2;
-                [alert setContext:@"multisources"];
-                [alert setNumberOfRows:1];
-                [alert show];
+                [alertController addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+                [alertController addAction:[UIAlertAction actionWithTitle:@"Add Matched Sources" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+                    Cydia *cyAppDelegate = (Cydia *)[UIApplication sharedApplication];
+
+                    for (id url in arrayOfURLs)
+                        [cyAppDelegate addTrivialSource:url];
+
+                    [cyAppDelegate syncData];
+                }]];
+                [alertController addAction:[UIAlertAction actionWithTitle:@"Simple Mode" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+                    simpleMode = true;
+
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 30 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+                        simpleMode = false;
+                    });
+
+                }]];
+
+                [[self navigationController] presentViewController:alertController animated:YES completion:nil];
             }
             else %orig;
 
@@ -63,56 +72,18 @@ static bool simpleMode = false;
 %hook UIAlertView
 - (void) show {
 
-    if ([self.context isEqualToString:@"source"]) {
+    if ([self.context isEqualToString:@"source"] && ([arrayOfURLs count] == 1)) {
 
-        if ([arrayOfURLs count] == 1) {
+        %orig;
 
-            %orig;
-
-            UITextField *textField = [self textFieldAtIndex:0];
-            self.title = @"⚠️ URL Detected\nIs that a valid repository?";
-            textField.clearButtonMode = UITextFieldViewModeWhileEditing;
-            textField.text = [arrayOfURLs objectAtIndex:0];
-
-        }
+        UITextField *textField = [self textFieldAtIndex:0];
+        self.title = @"⚠️ URL Detected\nIs that a valid repository?";
+        textField.clearButtonMode = UITextFieldViewModeWhileEditing;
+        textField.text = [arrayOfURLs objectAtIndex:0];
 
     }
     
     %orig;
 }
 
--(void)dismissWithClickedButtonIndex:(NSInteger)clickedButtonIndex animated:(BOOL)animated {
-
-    if (self.tag == 2 && clickedButtonIndex == 1) {
-
-        Cydia *cyAppDelegate = (Cydia *)[UIApplication sharedApplication];
-
-        for (id url in arrayOfURLs)
-            [cyAppDelegate addTrivialSource:url];
-
-        dispatch_async(dispatch_get_main_queue(), ^{ [cyAppDelegate syncData]; });
-
-        [self dismiss];
-    }
-    else if (self.tag == 2 && clickedButtonIndex == 2) {
-
-        
-
-        simpleMode = true;
-
-
-        dispatch_async(dispatch_get_main_queue(), ^{
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 30 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                simpleMode = false;
-              });
-        });
-
-
-        
-        [self dismiss];
-
-    }
-    else %orig;
-
-}
 %end
